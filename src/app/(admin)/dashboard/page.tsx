@@ -25,7 +25,7 @@ export default async function DashboardPage() {
   );
   const phasesByProject: Record<string, Phase[]> = {};
   dashboard.projectStatusTable.forEach((row, i) => {
-    phasesByProject[row.projectId] = phaseResults[i];
+    phasesByProject[row.projectId] = phaseResults[i] ?? [];
   });
 
   return (
