@@ -280,11 +280,13 @@ export async function sendReviewLink(
       },
     });
 
-    // 13. Conditionally update client primaryEmail (Req 5.5, 9.4)
-    if (
-      input.saveEmailToProfile &&
-      input.recipientEmail.toLowerCase() !== (client.primaryEmail ?? "").toLowerCase()
-    ) {
+    // 13. Always save recipient email to client profile if:
+    //   - Client has no primaryEmail yet (first time), OR
+    //   - The "save email to profile" checkbox is checked and email differs
+    const clientHasNoEmail = !client.primaryEmail || client.primaryEmail.trim() === "";
+    const emailChanged = input.recipientEmail.toLowerCase() !== (client.primaryEmail ?? "").toLowerCase();
+
+    if (clientHasNoEmail || (input.saveEmailToProfile && emailChanged)) {
       await repos.clients.update(client.id, {
         primaryEmail: input.recipientEmail,
       });

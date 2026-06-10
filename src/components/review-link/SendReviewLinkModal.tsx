@@ -73,10 +73,11 @@ export function SendReviewLinkModal({
       setCcEmail("");
       setSubject(generateEmailSubject(project.name, phase?.title));
       setCustomMessage("");
-      setSaveEmailToProfile(false);
+      // Auto-check "save email" when client has no email on file (ensures first-time save)
+      setSaveEmailToProfile(!client.primaryEmail || client.primaryEmail.trim() === "");
       setCopied(false);
     }
-  }, [isOpen, context.autoFilledEmail, project.name, phase?.title]);
+  }, [isOpen, context.autoFilledEmail, project.name, phase?.title, client.primaryEmail]);
 
   // Check if the entered email is valid (Req 9.3)
   const isEmailValid = useMemo(() => {
