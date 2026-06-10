@@ -1191,6 +1191,7 @@ class SupabaseShareLinkRepository implements ShareLinkRepository {
 // ---------------------------------------------------------------------------
 
 import { SupabaseEmailHistoryRepository } from '@/lib/repositories/email-history-repository';
+import { SupabaseNotificationRepository } from '@/lib/repositories/notification-repository';
 
 /**
  * Create the full {@link Repositories} aggregate backed by a Supabase client.
@@ -1221,5 +1222,6 @@ export function createSupabaseRepositories(db: SupabaseClient): Repositories {
     activityLogs: new SupabaseActivityLogRepository(db),
     shareLinks: new SupabaseShareLinkRepository(db),
     emailHistory: new SupabaseEmailHistoryRepository(db),
+    notifications: new SupabaseNotificationRepository(db),
   };
 }

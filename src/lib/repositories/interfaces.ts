@@ -32,6 +32,7 @@ import type {
   ClientStatus,
   Comment,
   DesignLink,
+  Notification,
   Phase,
   Project,
   ShareLink,
@@ -355,6 +356,33 @@ export interface EmailHistoryRepository {
   lastSentForClientProject(clientId: UUID, projectId: UUID): Promise<ClientEmailHistory | null>;
 }
 
+// ---------------------------------------------------------------------------
+// Notification Repository
+// ---------------------------------------------------------------------------
+
+/** Create input for a {@link Notification}. */
+export type NewNotification = Omit<Notification, 'id' | 'createdAt' | 'isRead'>;
+
+/**
+ * Persistence operations for {@link Notification} records.
+ *
+ * Notifications are append-only from the perspective of content (title/message/type
+ * are immutable once created), but the `isRead` flag is mutable to support
+ * marking notifications as read.
+ */
+export interface NotificationRepository {
+  /** Persist a new notification and resolve to the stored record. */
+  create(input: NewNotification): Promise<Notification>;
+  /** List notifications for a user, ordered by createdAt DESC. */
+  listByUser(userId: UUID, limit?: number): Promise<Notification[]>;
+  /** Count unread notifications for a user. */
+  countUnread(userId: UUID): Promise<number>;
+  /** Mark a single notification as read. */
+  markAsRead(id: UUID): Promise<void>;
+  /** Mark all notifications for a user as read. */
+  markAllAsRead(userId: UUID): Promise<void>;
+}
+
 /**
  * Aggregate of all repository interfaces, convenient for dependency injection
  * into application Server Actions and Route Handlers.
@@ -371,4 +399,5 @@ export interface Repositories {
   activityLogs: ActivityLogRepository;
   shareLinks: ShareLinkRepository;
   emailHistory: EmailHistoryRepository;
+  notifications: NotificationRepository;
 }

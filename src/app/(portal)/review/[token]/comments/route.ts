@@ -26,6 +26,7 @@ import {
 } from "@/lib/domain/share-link";
 import { buildCommentCreatedLog } from "@/lib/domain/activity";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { notifyAdminOfComment } from "@/lib/notifications/notify";
 
 // ---------------------------------------------------------------------------
 // POST /review/[token]/comments
@@ -169,6 +170,21 @@ export async function POST(
     detail: activityEntry.detail,
   });
 
-  // 10. Return the created comment
+  // 10. Notify the project owner (fire-and-forget)
+  const trimmedName = reviewerName.trim();
+  const project = await repos.projects.findById(phase.projectId);
+  if (project) {
+    notifyAdminOfComment({
+      adminUserId: project.ownerId,
+      projectId: project.id,
+      phaseId: phase.id,
+      projectName: project.name,
+      phaseName: phase.title,
+      reviewerName: trimmedName,
+      commentText: validatedText,
+    }).catch(() => {}); // fire-and-forget
+  }
+
+  // 11. Return the created comment
   return NextResponse.json({ ok: true, comment }, { status: 201 });
 }

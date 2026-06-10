@@ -264,3 +264,34 @@ export interface ReviewLinkModalContext {
   autoFilledEmail?: string;
   autoFilledName?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+/** The category of a notification event. */
+export type NotificationType =
+  | 'client_comment'
+  | 'client_approval'
+  | 'client_changes_requested'
+  | 'phase_status_changed'
+  | 'review_link_viewed';
+
+/**
+ * An in-app notification for the admin user.
+ *
+ * Notifications are created when clients interact with shared review links
+ * (commenting, approving, requesting changes) or when a review link is viewed.
+ */
+export interface Notification {
+  id: UUID;
+  userId: UUID;
+  projectId: UUID | null;
+  phaseId: UUID | null;
+  type: NotificationType;
+  title: string;
+  message: string;
+  isRead: boolean;
+  createdAt: ISOTimestamp;
+  metadata: Record<string, unknown>;
+}

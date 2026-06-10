@@ -14,6 +14,7 @@ const PROTECTED_PREFIXES = [
   "/sign-offs",
   "/activity",
   "/settings",
+  "/notifications",
 ];
 
 /**

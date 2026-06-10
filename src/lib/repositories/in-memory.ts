@@ -29,6 +29,7 @@ import type {
   Comment,
   DesignLink,
   ISOTimestamp,
+  Notification,
   Phase,
   Project,
   ShareLink,
@@ -51,10 +52,12 @@ import type {
   NewClientEmailHistory,
   NewComment,
   NewDesignLink,
+  NewNotification,
   NewPhase,
   NewProject,
   NewShareLink,
   NewTask,
+  NotificationRepository,
   PhasePatch,
   PhaseRepository,
   ProjectPatch,
@@ -485,6 +488,50 @@ export class InMemoryEmailHistoryRepository implements EmailHistoryRepository {
   }
 }
 
+// ─── Notification Repository ────────────────────────────────────────────────
+
+/**
+ * In-memory implementation of {@link NotificationRepository}.
+ *
+ * Notifications support create, list, and mark-as-read operations.
+ */
+export class InMemoryNotificationRepository implements NotificationRepository {
+  private readonly crud: CrudStore<Notification>;
+
+  constructor(nextId?: () => UUID, now?: () => ISOTimestamp) {
+    this.crud = new CrudStore<Notification>(
+      nextId ?? createIdFactory('notif'),
+      now ?? (() => new Date().toISOString()),
+    );
+  }
+
+  async create(input: NewNotification): Promise<Notification> {
+    return this.crud.create({ ...input, isRead: false });
+  }
+
+  async listByUser(userId: UUID, limit?: number): Promise<Notification[]> {
+    const all = this.crud
+      .filter((n) => n.userId === userId)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return limit !== undefined ? all.slice(0, Math.max(0, limit)) : all;
+  }
+
+  async countUnread(userId: UUID): Promise<number> {
+    return this.crud.filter((n) => n.userId === userId && !n.isRead).length;
+  }
+
+  async markAsRead(id: UUID): Promise<void> {
+    this.crud.update(id, { isRead: true } as Partial<Notification>);
+  }
+
+  async markAllAsRead(userId: UUID): Promise<void> {
+    const unread = this.crud.filter((n) => n.userId === userId && !n.isRead);
+    for (const n of unread) {
+      this.crud.update(n.id, { isRead: true } as Partial<Notification>);
+    }
+  }
+}
+
 /**
  * The fully-wired in-memory {@link Repositories} aggregate, with the concrete
  * repository instances exposed for seeding/inspection in tests.
@@ -501,6 +548,7 @@ export interface InMemoryRepositories extends Repositories {
   activityLogs: InMemoryActivityLogRepository;
   shareLinks: InMemoryShareLinkRepository;
   emailHistory: InMemoryEmailHistoryRepository;
+  notifications: InMemoryNotificationRepository;
 }
 
 /**
@@ -556,5 +604,6 @@ export function createInMemoryRepositories(
     ),
     shareLinks,
     emailHistory: new InMemoryEmailHistoryRepository(idFor('emailhist')),
+    notifications: new InMemoryNotificationRepository(idFor('notif'), now),
   };
 }

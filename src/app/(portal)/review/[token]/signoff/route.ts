@@ -34,6 +34,7 @@ import { buildApprovalOutcome } from "@/lib/domain/approval";
 import { nextStatusOnApproval } from "@/lib/domain/phase-status";
 import type { ApprovalDecision } from "@/lib/domain/types";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { notifyAdminOfApproval } from "@/lib/notifications/notify";
 
 // ---------------------------------------------------------------------------
 // POST /review/[token]/signoff
@@ -247,7 +248,21 @@ export async function POST(
       });
     }
 
-    // 12. Return the approval confirmation (R9.6)
+    // 12. Notify the project owner (fire-and-forget)
+    const project = await repos.projects.findById(phase.projectId);
+    if (project) {
+      notifyAdminOfApproval({
+        adminUserId: project.ownerId,
+        projectId: project.id,
+        phaseId: phase.id,
+        projectName: project.name,
+        phaseName: phase.title,
+        reviewerName: approval.reviewerName,
+        decision: approval.decision,
+      }).catch(() => {}); // fire-and-forget
+    }
+
+    // 13. Return the approval confirmation (R9.6)
     return NextResponse.json(
       {
         ok: true,

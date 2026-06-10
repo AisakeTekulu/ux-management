@@ -30,6 +30,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Sidebar } from "./Sidebar";
+import { NotificationBell } from "./NotificationBell";
 
 /** localStorage key for the desktop collapsed/expanded preference. */
 export const SIDEBAR_COLLAPSED_STORAGE_KEY = "csod.sidebar.collapsed";
@@ -161,6 +162,7 @@ export function AppShell({ children, header }: AppShellProps) {
           </button>
 
           <div className="min-w-0 flex-1">{header}</div>
+          <NotificationBell />
         </header>
 
         {/* Main content area. */}
