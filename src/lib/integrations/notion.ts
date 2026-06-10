@@ -77,15 +77,6 @@ export async function syncTaskToNotion(input: NotionTaskInput): Promise<void> {
   if (!notion || !databaseId) return;
 
   try {
-    // Only send Title (guaranteed to exist) + any properties the database has.
-    // Notion ignores unknown properties gracefully with the right approach:
-    // We use a minimal payload — just the Title — and add optional properties
-    // that may or may not exist in the user's database.
-    const properties: Record<string, unknown> = {
-      // Title is the only required property (every Notion DB has it)
-      title: [{ text: { content: input.title } }],
-    };
-
     await notion.pages.create({
       parent: { database_id: databaseId },
       properties: {

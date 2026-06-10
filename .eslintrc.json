@@ -1,3 +1,15 @@
 {
-  "extends": ["next/core-web-vitals", "next/typescript"]
+  "extends": ["next/core-web-vitals", "next/typescript"],
+  "rules": {
+    "@typescript-eslint/no-unused-vars": "warn"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx", "**/*.property.test.ts", "src/test/**/*"],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off",
+        "@typescript-eslint/no-unused-vars": "off"
+      }
+    }
+  ]
 }

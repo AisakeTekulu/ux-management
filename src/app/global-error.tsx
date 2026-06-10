@@ -1,10 +1,10 @@
 'use client';
 
 export default function GlobalError({
-  error,
+  _error,
   reset,
 }: {
-  error: Error & { digest?: string };
+  _error: Error & { digest?: string };
   reset: () => void;
 }) {
   return (
@@ -27,6 +27,8 @@ export default function GlobalError({
             >
               Try again
             </button>
+            {/* Using <a> here intentionally — global-error replaces the root layout so next/link is unavailable */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
               href="/"
               className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-text hover:bg-surface transition-colors"
