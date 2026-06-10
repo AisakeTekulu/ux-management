@@ -17,11 +17,16 @@ export default async function DashboardPage() {
   const supabase = await createClient();
   const repos = createSupabaseRepositories(supabase);
 
+  // Fetch all phases in parallel to avoid sequential waterfall
+  const phaseResults = await Promise.all(
+    dashboard.projectStatusTable.map((row) =>
+      repos.phases.listByProject(row.projectId),
+    ),
+  );
   const phasesByProject: Record<string, Phase[]> = {};
-  for (const row of dashboard.projectStatusTable) {
-    const phases = await repos.phases.listByProject(row.projectId);
-    phasesByProject[row.projectId] = phases;
-  }
+  dashboard.projectStatusTable.forEach((row, i) => {
+    phasesByProject[row.projectId] = phaseResults[i];
+  });
 
   return (
     <DashboardContent

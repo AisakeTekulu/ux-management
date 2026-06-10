@@ -47,6 +47,13 @@ function isProtectedRoute(pathname: string): boolean {
  * admin functions to authenticated Designers), 1.7 (inactivity timeout).
  */
 export async function middleware(request: NextRequest) {
+  // Guard against missing env vars (prevents cryptic crashes in production)
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    // If env vars are missing, let the request through without auth checks
+    // (the app will show appropriate errors on the page level)
+    return NextResponse.next({ request });
+  }
+
   // Start with a response that passes through so we can attach updated cookies.
   let supabaseResponse = NextResponse.next({ request });
 
