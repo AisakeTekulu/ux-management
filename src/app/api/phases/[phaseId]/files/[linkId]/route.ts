@@ -42,11 +42,13 @@ export async function GET(
     return NextResponse.json({ error: "File path missing." }, { status: 404 });
   }
 
-  // Generate signed URL using service role client
+  // Generate signed URL using service role client (inline viewing, not forced download)
   const serviceClient = createServiceRoleClient();
   const { data, error } = await serviceClient.storage
     .from(STORAGE_BUCKET)
-    .createSignedUrl(designLink.storagePath, SIGNED_URL_EXPIRY_SECONDS);
+    .createSignedUrl(designLink.storagePath, SIGNED_URL_EXPIRY_SECONDS, {
+      download: false,
+    });
 
   if (error || !data?.signedUrl) {
     return NextResponse.json({ error: "Could not generate file URL." }, { status: 502 });

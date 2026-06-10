@@ -46,10 +46,12 @@ export async function GET(
     return NextResponse.json({ error: INVALID_LINK_MESSAGE }, { status: 403 });
   }
 
-  // Generate signed URL
+  // Generate signed URL with inline content disposition for browser viewing
   const { data, error } = await serviceClient.storage
     .from(STORAGE_BUCKET)
-    .createSignedUrl(designLink.storagePath, SIGNED_URL_EXPIRY_SECONDS);
+    .createSignedUrl(designLink.storagePath, SIGNED_URL_EXPIRY_SECONDS, {
+      download: false,
+    });
 
   if (error || !data?.signedUrl) {
     return NextResponse.json({ error: "Could not generate file URL." }, { status: 502 });
