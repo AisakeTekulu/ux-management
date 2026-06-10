@@ -2,10 +2,11 @@
 
 /**
  * Notifications page — lists all notifications for the authenticated admin,
- * grouped by project, with mark-as-read controls.
+ * grouped by project, with mark-as-read controls and click-to-navigate.
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import {
@@ -18,6 +19,7 @@ import {
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationData[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const loadNotifications = useCallback(async () => {
     setLoading(true);
@@ -36,6 +38,22 @@ export default function NotificationsPage() {
   const handleMarkAllRead = async () => {
     await markAllNotificationsRead();
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+  };
+
+  /** Navigate to the source of the notification and mark it as read. */
+  const handleNotificationClick = async (n: NotificationData) => {
+    // Mark as read
+    if (!n.isRead) {
+      markNotificationRead(n.id).catch(() => {});
+      setNotifications((prev) => prev.map((item) => item.id === n.id ? { ...item, isRead: true } : item));
+    }
+
+    // Navigate to the relevant page
+    if (n.phaseId && n.projectId) {
+      router.push(`/projects/${n.projectId}/phases/${n.phaseId}`);
+    } else if (n.projectId) {
+      router.push(`/projects/${n.projectId}`);
+    }
   };
 
   // Group by project
@@ -99,7 +117,11 @@ export default function NotificationsPage() {
                 {items.map((n) => (
                   <li
                     key={n.id}
-                    className={`flex items-start gap-token-3 px-token-4 py-token-3 ${!n.isRead ? 'bg-primary/5' : ''}`}
+                    className={`flex items-start gap-token-3 px-token-4 py-token-3 cursor-pointer hover:bg-surface-hovered transition-colors ${!n.isRead ? 'bg-primary/5' : ''}`}
+                    onClick={() => handleNotificationClick(n)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleNotificationClick(n); }}
                   >
                     <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${!n.isRead ? 'bg-primary' : 'bg-transparent'}`} />
                     <div className="flex-1 min-w-0">
@@ -111,15 +133,20 @@ export default function NotificationsPage() {
                         {new Date(n.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                       </p>
                     </div>
-                    {!n.isRead && (
-                      <button
-                        type="button"
-                        onClick={() => handleMarkRead(n.id)}
-                        className="shrink-0 text-xs font-medium text-primary hover:text-primary-hovered"
-                      >
-                        Mark read
-                      </button>
-                    )}
+                    <div className="flex items-center gap-token-2 shrink-0">
+                      {!n.isRead && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleMarkRead(n.id); }}
+                          className="text-xs font-medium text-primary hover:text-primary-hovered"
+                        >
+                          Mark read
+                        </button>
+                      )}
+                      <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="text-text-subdued" strokeLinecap="round">
+                        <path d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
                   </li>
                 ))}
               </ul>
