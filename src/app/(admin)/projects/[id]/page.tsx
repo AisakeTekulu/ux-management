@@ -90,9 +90,9 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const handleSendToClient = async () => {
+  const handleSendToClient = async (phaseId?: string) => {
     setLoadingModalContext(true);
-    const result = await getReviewLinkModalContext(params.id);
+    const result = await getReviewLinkModalContext(params.id, phaseId);
     setLoadingModalContext(false);
     if (result.ok) {
       setReviewModalContext(result.value);
@@ -170,7 +170,7 @@ export default function ProjectDetailPage() {
           </button>
           <button
             type="button"
-            onClick={handleSendToClient}
+            onClick={() => handleSendToClient()}
             disabled={loadingModalContext || phases.length === 0}
             className="inline-flex items-center gap-token-2 rounded-lg bg-primary px-token-4 py-[9px] text-sm font-semibold text-text-on-primary shadow-sm hover:bg-primary-hovered disabled:opacity-50 transition-all"
           >
@@ -262,19 +262,21 @@ export default function ProjectDetailPage() {
               const badgeStatus: StatusBadgeKey = overdue ? "Overdue" : (phase.status as StatusBadgeKey);
 
               return (
-                <button
+                <div
                   key={phase.id}
-                  type="button"
-                  onClick={() => router.push(`/projects/${params.id}/phases/${phase.id}`)}
-                  className="group flex w-full items-center gap-token-4 rounded-lg border border-border bg-surface p-token-4 text-left transition-all hover:shadow-card-hovered hover:border-primary/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                  className="group flex w-full items-center gap-token-4 rounded-lg border border-border bg-surface p-token-4 transition-all hover:shadow-card-hovered hover:border-primary/20"
                 >
                   {/* Phase number */}
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface-subdued text-xs font-bold text-text-subdued group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                     {phase.ordinal}
                   </span>
 
-                  {/* Phase info */}
-                  <div className="flex-1 min-w-0">
+                  {/* Phase info — clickable to navigate */}
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/projects/${params.id}/phases/${phase.id}`)}
+                    className="flex-1 min-w-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-focus rounded"
+                  >
                     <p className="font-medium text-text group-hover:text-primary transition-colors truncate">
                       {phase.title}
                     </p>
@@ -283,21 +285,46 @@ export default function ProjectDetailPage() {
                         {phase.description.slice(0, 100)}{phase.description.length > 100 ? "…" : ""}
                       </p>
                     )}
-                  </div>
+                  </button>
 
-                  {/* Meta */}
-                  <div className="flex items-center gap-token-3 shrink-0">
+                  {/* Meta + Send button */}
+                  <div className="flex items-center gap-token-2 shrink-0">
                     {phase.dueDate && (
                       <span className={`text-xs ${overdue ? "text-status-red font-medium" : "text-text-subdued"}`}>
                         {new Date(phase.dueDate + "T00:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                       </span>
                     )}
                     <StatusBadge status={badgeStatus} />
-                    <svg className="h-4 w-4 text-text-subdued group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
+
+                    {/* Per-phase Send to Client button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSendToClient(phase.id);
+                      }}
+                      disabled={loadingModalContext}
+                      title={`Send ${phase.title} to client for review`}
+                      className="inline-flex items-center gap-1 rounded-md border border-border bg-surface px-token-2 py-token-1 text-xs font-medium text-primary hover:bg-primary/5 hover:border-primary/30 transition-all disabled:opacity-50"
+                    >
+                      <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 2L11 13" />
+                        <path d="M22 2l-7 20-4-9-9-4 20-7z" />
+                      </svg>
+                      Send
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/projects/${params.id}/phases/${phase.id}`)}
+                      className="p-1 rounded hover:bg-surface-hovered transition-colors"
+                    >
+                      <svg className="h-4 w-4 text-text-subdued group-hover:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
