@@ -192,25 +192,30 @@ export async function markTaskCompleteInNotion(taskTitle: string): Promise<void>
   if (!isConfigured()) return;
 
   const notion = getNotionClient();
-  const databaseId = getDatabaseId();
-  if (!notion || !databaseId) return;
+  if (!notion) return;
 
   try {
-    // Search for the task by title in the database
-    const response = await notion.databases.query({
-      database_id: databaseId,
-      filter: {
-        property: "Name",
-        title: { equals: taskTitle },
-      },
-      page_size: 1,
+    // Use the search API to find the page by title
+    const response = await notion.search({
+      query: taskTitle,
+      filter: { property: "object", value: "page" },
+      page_size: 5,
     });
 
-    if (response.results.length > 0) {
-      const pageId = response.results[0].id;
-      // Add a strikethrough or "✓ DONE" prefix to indicate completion
+    // Find the page whose title matches
+    const matchingPage = response.results.find((page) => {
+      if ("properties" in page) {
+        const titleProp = (page.properties as Record<string, { title?: Array<{ plain_text: string }> }>).Name;
+        if (titleProp?.title?.[0]?.plain_text === taskTitle) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    if (matchingPage) {
       await notion.pages.update({
-        page_id: pageId,
+        page_id: matchingPage.id,
         properties: {
           Name: { title: [{ text: { content: `✓ ${taskTitle}` } }] },
         },
