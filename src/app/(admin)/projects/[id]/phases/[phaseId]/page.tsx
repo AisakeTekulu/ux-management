@@ -33,6 +33,8 @@ import {
 } from "@/lib/actions/checklist";
 import { addDesignLinkUrl, deleteDesignLink } from "@/lib/actions/design-links";
 import { addComment } from "@/lib/actions/comments";
+import { getReviewLinkModalContext, sendReviewLink } from "@/lib/actions/review-links";
+import { SendReviewLinkModal } from "@/components/review-link/SendReviewLinkModal";
 
 import type {
   Phase,
@@ -40,6 +42,8 @@ import type {
   DesignLink,
   Comment,
   Approval,
+  ReviewLinkModalContext,
+  SendReviewLinkInput,
 } from "@/lib/domain/types";
 import type { StatusBadgeKey } from "@/lib/domain/status-presentation";
 
@@ -98,6 +102,11 @@ export default function PhaseDetailPage() {
 
   // Complete modal
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+
+  // Send to client modal
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewModalContext, setReviewModalContext] = useState<ReviewLinkModalContext | null>(null);
+  const [loadingModalContext, setLoadingModalContext] = useState(false);
 
   // Background refresh — doesn't show loading spinner, just silently updates
   const refreshData = useCallback(async () => {
@@ -233,6 +242,30 @@ export default function PhaseDetailPage() {
     else showToast(result.error.message);
   };
 
+  const handleSendToClient = async () => {
+    setLoadingModalContext(true);
+    const result = await getReviewLinkModalContext(params.id, params.phaseId);
+    setLoadingModalContext(false);
+    if (result.ok) {
+      setReviewModalContext(result.value);
+      setReviewModalOpen(true);
+    } else {
+      showToast(result.error.message);
+    }
+  };
+
+  const handleSendReviewLink = async (input: SendReviewLinkInput) => {
+    const result = await sendReviewLink(input);
+    if (result.ok) {
+      setReviewModalOpen(false);
+      setReviewModalContext(null);
+      showToast("Review link sent successfully");
+      refreshData();
+    } else {
+      showToast(result.error.message);
+    }
+  };
+
   // Loading state — only on first load
   if (loading && !data) {
     return (
@@ -349,14 +382,30 @@ export default function PhaseDetailPage() {
                   )}
                 </div>
               ) : (
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={10}
-                  maxLength={5000}
-                  className="w-full resize-y rounded-lg border border-border bg-surface-subdued px-token-3 py-token-3 text-sm text-text placeholder:text-text-subdued focus:border-focus focus:bg-surface focus:outline-none focus:ring-1 focus:ring-focus font-mono"
-                  placeholder="Write your phase content here...&#10;&#10;Supports Markdown:&#10;# Heading&#10;- Bullet points&#10;**Bold text**&#10;| Tables |"
-                />
+                <div>
+                  {/* Formatting toolbar hint */}
+                  <div className="mb-token-2 flex flex-wrap items-center gap-token-2 text-[10px] text-text-subdued border-b border-border pb-token-2">
+                    <span className="font-mono bg-surface-subdued px-1 rounded"># Heading 1</span>
+                    <span className="font-mono bg-surface-subdued px-1 rounded">## Heading 2</span>
+                    <span className="font-mono bg-surface-subdued px-1 rounded">### Heading 3</span>
+                    <span className="font-mono bg-surface-subdued px-1 rounded">**Bold**</span>
+                    <span className="font-mono bg-surface-subdued px-1 rounded">*Italic*</span>
+                    <span className="font-mono bg-surface-subdued px-1 rounded">- Bullet</span>
+                    <span className="font-mono bg-surface-subdued px-1 rounded">1. Numbered</span>
+                    <span className="font-mono bg-surface-subdued px-1 rounded">[Link](url)</span>
+                  </div>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={12}
+                    maxLength={5000}
+                    className="w-full resize-y rounded-lg border border-border bg-surface-subdued px-token-3 py-token-3 text-sm text-text placeholder:text-text-subdued focus:border-focus focus:bg-surface focus:outline-none focus:ring-1 focus:ring-focus font-mono leading-relaxed"
+                    placeholder={"# Phase Title\n\nWrite your phase content here. Use Markdown for formatting:\n\n## Section Heading\n\nParagraph text goes here. You can use **bold** and *italic* for emphasis.\n\n### Subsection\n\n- Bullet point 1\n- Bullet point 2\n\n1. Numbered step\n2. Another step"}
+                  />
+                  <p className="mt-token-1 text-[10px] text-text-subdued">
+                    {description.length}/5000 characters · Supports Markdown formatting
+                  </p>
+                </div>
               )}
             </div>
           </div>
@@ -507,6 +556,20 @@ export default function PhaseDetailPage() {
             {saving ? "Saving…" : "Save Changes"}
           </button>
 
+          {/* Send to Client button */}
+          <button
+            type="button"
+            onClick={handleSendToClient}
+            disabled={loadingModalContext}
+            className="w-full inline-flex items-center justify-center gap-token-2 rounded-lg border border-border bg-surface px-token-4 py-[11px] text-sm font-semibold text-text hover:bg-surface-hovered transition-all disabled:opacity-50"
+          >
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 2L11 13" />
+              <path d="M22 2l-7 20-4-9-9-4 20-7z" />
+            </svg>
+            {loadingModalContext ? "Loading…" : "Send to Client"}
+          </button>
+
           {/* Due date */}
           <div className="rounded-lg border border-border bg-surface p-token-4">
             <label className="block text-xs font-semibold text-text-subdued uppercase tracking-wide mb-token-2">
@@ -641,6 +704,16 @@ export default function PhaseDetailPage() {
           fileName={viewerFile.name}
           open={viewerOpen}
           onClose={() => { setViewerOpen(false); setViewerFile(null); }}
+        />
+      )}
+
+      {/* Send Review Link Modal */}
+      {reviewModalContext && (
+        <SendReviewLinkModal
+          isOpen={reviewModalOpen}
+          onClose={() => { setReviewModalOpen(false); setReviewModalContext(null); }}
+          context={reviewModalContext}
+          onSend={handleSendReviewLink}
         />
       )}
     </div>
