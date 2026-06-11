@@ -144,16 +144,29 @@ export default function DashboardContent({
                       phase.status,
                       now
                     );
+                    // Look up the project/client info for this phase
+                    const projectRow = projectStatusTable.find(
+                      (r) => r.projectId === phase.projectId
+                    );
+                    const projectLabel = projectRow
+                      ? `${projectRow.clientName} · ${projectRow.projectName}`
+                      : "";
                     return (
                       <li
                         key={phase.id}
-                        className={`rounded-md px-token-3 py-token-2 ${
+                        className={`rounded-md px-token-3 py-token-2 cursor-pointer hover:opacity-80 transition-opacity ${
                           overdue ? "bg-red-50 border border-red-200" : "bg-surface-subdued"
                         }`}
+                        onClick={() => router.push(`/projects/${phase.projectId}`)}
                       >
                         <p className={`text-sm font-medium truncate ${overdue ? "text-red-800" : "text-text"}`}>
                           {phase.title}
                         </p>
+                        {projectLabel && (
+                          <p className="text-[11px] text-text-subdued truncate">
+                            {projectLabel}
+                          </p>
+                        )}
                         <p className={`text-xs mt-0.5 ${overdue ? "text-red-600" : "text-text-subdued"}`}>
                           {overdue && "⚠️ Overdue · "}
                           {phase.dueDate ? `Due ${formatDate(phase.dueDate)}` : phase.status}
