@@ -258,6 +258,11 @@ export function generateEmailTemplate(
   // Sign-off with admin name (Req 6.4)
   lines.push(`Best regards,`);
   lines.push(adminName);
+  lines.push('');
+
+  // Deliverability note
+  lines.push('---');
+  lines.push('If you don\'t see future emails from us, please check your spam/junk folder and mark this sender as safe.');
 
   const body = lines.join('\n');
 

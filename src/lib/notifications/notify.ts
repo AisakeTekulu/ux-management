@@ -98,6 +98,9 @@ export async function notifyClientOfFeedback(params: {
     '',
     'Best regards,',
     'Your Design Team',
+    '',
+    '---',
+    'If you don\'t see future emails from us, please check your spam/junk folder and mark this sender as safe.',
   ].filter(Boolean).join('\n');
 
   await sendEmail({ to: params.clientEmail, subject, text: body });
