@@ -115,7 +115,7 @@ export default function DashboardContent({
                 No phases awaiting client feedback
               </p>
             ) : (
-              <ul className="space-y-token-2">
+              <ul className="space-y-token-1">
                 {[...waitingOnClient]
                   .sort((a, b) => {
                     const aOverdue = isOverdue(
@@ -130,13 +130,12 @@ export default function DashboardContent({
                     );
                     if (aOverdue && !bOverdue) return -1;
                     if (!aOverdue && bOverdue) return 1;
-                    // Among overdue items, most overdue first (earliest due date)
                     if (aOverdue && bOverdue && a.dueDate && b.dueDate) {
                       return a.dueDate.localeCompare(b.dueDate);
                     }
                     return 0;
                   })
-                  .slice(0, 6)
+                  .slice(0, 5)
                   .map((phase) => {
                     const overdue = isOverdue(
                       phase.dueDate
@@ -148,33 +147,31 @@ export default function DashboardContent({
                     return (
                       <li
                         key={phase.id}
-                        className="flex items-center justify-between rounded-md border border-border px-token-3 py-token-2 bg-surface hover:bg-surface-hovered transition-colors"
+                        className={`rounded-md px-token-3 py-token-2 ${
+                          overdue ? "bg-red-50 border border-red-200" : "bg-surface-subdued"
+                        }`}
                       >
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm text-text truncate font-medium">
-                            {phase.title}
-                          </p>
-                          {phase.dueDate && (
-                            <p
-                              className={`text-xs mt-0.5 flex items-center gap-1 ${
-                                overdue
-                                  ? "text-red-600 font-medium"
-                                  : "text-text-subdued"
-                              }`}
-                            >
-                              {overdue && <span>⚠️</span>}
-                              Due{" "}
-                              {formatDate(phase.dueDate)}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {overdue && <StatusBadge status="Overdue" />}
-                          <StatusBadge status={phase.status} />
-                        </div>
+                        <p className={`text-sm font-medium truncate ${overdue ? "text-red-800" : "text-text"}`}>
+                          {phase.title}
+                        </p>
+                        <p className={`text-xs mt-0.5 ${overdue ? "text-red-600" : "text-text-subdued"}`}>
+                          {overdue && "⚠️ Overdue · "}
+                          {phase.dueDate ? `Due ${formatDate(phase.dueDate)}` : phase.status}
+                        </p>
                       </li>
                     );
                   })}
+                {waitingOnClient.length > 5 && (
+                  <li className="text-center pt-token-1">
+                    <button
+                      type="button"
+                      onClick={() => router.push("/sign-offs")}
+                      className="text-xs font-medium text-primary hover:text-primary-hovered"
+                    >
+                      +{waitingOnClient.length - 5} more →
+                    </button>
+                  </li>
+                )}
               </ul>
             )}
           </Panel>
