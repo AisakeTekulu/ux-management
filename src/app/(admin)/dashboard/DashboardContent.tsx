@@ -14,6 +14,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Timeline, type TimelineEntry } from "@/components/ui/Timeline";
 import { isOverdue } from "@/lib/domain/phase-status";
+import { formatDate } from "@/lib/format-date";
 import type { DashboardViewModel, ProjectStatusRow } from "@/lib/domain/dashboard";
 import type { Phase, PhaseStatus, Task, ActivityLog } from "@/lib/domain/types";
 
@@ -103,7 +104,7 @@ export default function DashboardContent({
             </div>
           </Panel>
 
-          {/* Waiting on Client */}
+          {/* Waiting on Client — overdue items appear first */}
           <Panel
             title="Waiting on Client"
             count={waitingOnClient.length}
@@ -115,45 +116,65 @@ export default function DashboardContent({
               </p>
             ) : (
               <ul className="space-y-token-2">
-                {waitingOnClient.slice(0, 6).map((phase) => {
-                  const overdue = isOverdue(
-                    phase.dueDate
-                      ? new Date(`${phase.dueDate}T00:00:00.000Z`)
-                      : null,
-                    phase.status,
-                    now
-                  );
-                  return (
-                    <li
-                      key={phase.id}
-                      className="flex items-center justify-between rounded-md border border-border px-token-3 py-token-2 bg-surface hover:bg-surface-hovered transition-colors"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm text-text truncate font-medium">
-                          {phase.title}
-                        </p>
-                        {phase.dueDate && (
-                          <p
-                            className={`text-xs mt-0.5 ${
-                              overdue
-                                ? "text-status-red font-medium"
-                                : "text-text-subdued"
-                            }`}
-                          >
-                            Due{" "}
-                            {new Date(
-                              phase.dueDate + "T00:00:00Z"
-                            ).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                            })}
+                {[...waitingOnClient]
+                  .sort((a, b) => {
+                    const aOverdue = isOverdue(
+                      a.dueDate ? new Date(`${a.dueDate}T00:00:00.000Z`) : null,
+                      a.status,
+                      now
+                    );
+                    const bOverdue = isOverdue(
+                      b.dueDate ? new Date(`${b.dueDate}T00:00:00.000Z`) : null,
+                      b.status,
+                      now
+                    );
+                    if (aOverdue && !bOverdue) return -1;
+                    if (!aOverdue && bOverdue) return 1;
+                    // Among overdue items, most overdue first (earliest due date)
+                    if (aOverdue && bOverdue && a.dueDate && b.dueDate) {
+                      return a.dueDate.localeCompare(b.dueDate);
+                    }
+                    return 0;
+                  })
+                  .slice(0, 6)
+                  .map((phase) => {
+                    const overdue = isOverdue(
+                      phase.dueDate
+                        ? new Date(`${phase.dueDate}T00:00:00.000Z`)
+                        : null,
+                      phase.status,
+                      now
+                    );
+                    return (
+                      <li
+                        key={phase.id}
+                        className="flex items-center justify-between rounded-md border border-border px-token-3 py-token-2 bg-surface hover:bg-surface-hovered transition-colors"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm text-text truncate font-medium">
+                            {phase.title}
                           </p>
-                        )}
-                      </div>
-                      <StatusBadge status={phase.status} />
-                    </li>
-                  );
-                })}
+                          {phase.dueDate && (
+                            <p
+                              className={`text-xs mt-0.5 flex items-center gap-1 ${
+                                overdue
+                                  ? "text-red-600 font-medium"
+                                  : "text-text-subdued"
+                              }`}
+                            >
+                              {overdue && <span>⚠️</span>}
+                              Due{" "}
+                              {formatDate(phase.dueDate)}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {overdue && <StatusBadge status="Overdue" />}
+                          <StatusBadge status={phase.status} />
+                        </div>
+                      </li>
+                    );
+                  })}
               </ul>
             )}
           </Panel>
@@ -190,7 +211,24 @@ export default function DashboardContent({
               />
             ) : (
               <div className="space-y-token-3">
-                {projectStatusTable.slice(0, 6).map((row) => {
+                {[...projectStatusTable]
+                  .sort((a, b) => {
+                    const aOverdue = a.dueDate
+                      ? isOverdue(new Date(`${a.dueDate}T00:00:00.000Z`), a.status, now)
+                      : false;
+                    const bOverdue = b.dueDate
+                      ? isOverdue(new Date(`${b.dueDate}T00:00:00.000Z`), b.status, now)
+                      : false;
+                    if (aOverdue && !bOverdue) return -1;
+                    if (!aOverdue && bOverdue) return 1;
+                    // Among overdue items, most overdue first (earliest due date)
+                    if (aOverdue && bOverdue && a.dueDate && b.dueDate) {
+                      return a.dueDate.localeCompare(b.dueDate);
+                    }
+                    return 0;
+                  })
+                  .slice(0, 6)
+                  .map((row) => {
                   const phases = phasesByProject[row.projectId] ?? [];
                   const completedCount = phases.filter(
                     (p) => p.status === "Completed" || p.status === "Approved"
@@ -200,6 +238,9 @@ export default function DashboardContent({
                     totalCount > 0
                       ? Math.round((completedCount / totalCount) * 100)
                       : 0;
+                  const rowOverdue = row.dueDate
+                    ? isOverdue(new Date(`${row.dueDate}T00:00:00.000Z`), row.status, now)
+                    : false;
 
                   return (
                     <button
@@ -224,6 +265,7 @@ export default function DashboardContent({
                           <span className="text-xs text-text-subdued">
                             {completedCount}/{totalCount} phases
                           </span>
+                          {rowOverdue && <StatusBadge status="Overdue" />}
                           <StatusBadge status={row.status} />
                         </div>
                       </div>
@@ -253,7 +295,7 @@ export default function DashboardContent({
                         </div>
                       )}
 
-                      {/* Footer: current phase + next action */}
+                      {/* Footer: current phase + due date */}
                       <div className="flex items-center justify-between text-xs text-text-subdued">
                         <span>
                           Current:{" "}
@@ -264,22 +306,14 @@ export default function DashboardContent({
                         {row.dueDate && (
                           <span
                             className={
-                              isOverdue(
-                                new Date(`${row.dueDate}T00:00:00.000Z`),
-                                row.status,
-                                now
-                              )
-                                ? "text-status-red font-medium"
+                              rowOverdue
+                                ? "text-red-600 font-medium flex items-center gap-1"
                                 : ""
                             }
                           >
+                            {rowOverdue && <span>⚠️</span>}
                             Due{" "}
-                            {new Date(
-                              row.dueDate + "T00:00:00Z"
-                            ).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                            })}
+                            {formatDate(row.dueDate)}
                           </span>
                         )}
                       </div>
@@ -360,12 +394,7 @@ export default function DashboardContent({
                       {task.dueDate && (
                         <p className="text-xs text-text-subdued mt-0.5">
                           Due{" "}
-                          {new Date(
-                            task.dueDate + "T00:00:00Z"
-                          ).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                          })}
+                          {formatDate(task.dueDate)}
                         </p>
                       )}
                     </div>
@@ -373,37 +402,6 @@ export default function DashboardContent({
                 ))}
               </ul>
             )}
-          </Panel>
-
-          {/* Quick Links */}
-          <Panel title="Quick Links">
-            <nav className="space-y-token-1">
-              <QuickLink
-                label="All Clients"
-                onClick={() => router.push("/clients")}
-                icon={<UsersIcon />}
-              />
-              <QuickLink
-                label="All Projects"
-                onClick={() => router.push("/projects")}
-                icon={<FolderIcon />}
-              />
-              <QuickLink
-                label="Sign-offs"
-                onClick={() => router.push("/sign-offs")}
-                icon={<CheckIcon />}
-              />
-              <QuickLink
-                label="Activity Log"
-                onClick={() => router.push("/activity")}
-                icon={<ClockIcon />}
-              />
-              <QuickLink
-                label="Settings"
-                onClick={() => router.push("/settings")}
-                icon={<GearIcon />}
-              />
-            </nav>
           </Panel>
         </aside>
       </div>
@@ -486,31 +484,6 @@ function StatRow({ label, value, icon, color }: StatRowProps) {
   );
 }
 
-// ─── Quick Link ───────────────────────────────────────────────────────────────
-
-function QuickLink({
-  label,
-  onClick,
-  icon,
-}: {
-  label: string;
-  onClick: () => void;
-  icon: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center gap-token-3 rounded-md px-token-3 py-token-2 text-left text-sm text-text hover:bg-surface-hovered transition-colors"
-    >
-      <span className="flex h-6 w-6 items-center justify-center rounded-md bg-surface-subdued text-text-subdued">
-        {icon}
-      </span>
-      {label}
-    </button>
-  );
-}
-
 // ─── Activity Description ─────────────────────────────────────────────────────
 
 function buildActivityDescription(entry: ActivityLog): string {
@@ -578,26 +551,6 @@ function CheckIcon() {
     <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 11l3 3L22 4" />
       <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
-    </svg>
-  );
-}
-
-function UsersIcon() {
-  return (
-    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 00-3-3.87" />
-      <path d="M16 3.13a4 4 0 010 7.75" />
-    </svg>
-  );
-}
-
-function GearIcon() {
-  return (
-    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
     </svg>
   );
 }

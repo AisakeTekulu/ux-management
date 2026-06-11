@@ -20,6 +20,7 @@
 
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { relativeTime, formatTimestamp } from "@/lib/format-date";
 import type { ActivityType, ISOTimestamp } from "@/lib/domain/types";
 
 /** A single entry rendered in the timeline. */
@@ -83,28 +84,42 @@ const TYPE_NODE_COLOR: Record<ActivityType, string> = {
 };
 
 /**
- * Deterministic default timestamp formatter. Renders the instant in UTC so the
- * server and client produce identical markup regardless of the viewer's locale
- * or timezone. Falls back to the raw value if it cannot be parsed.
+ * Default timestamp formatter using relative time for recent events.
+ * Falls back to the raw value if it cannot be parsed.
+ * The full timestamp is shown on hover via the `title` attribute on the
+ * <time> element.
  */
 function defaultFormatTimestamp(timestamp: ISOTimestamp): string {
   const parsed = new Date(timestamp);
   if (Number.isNaN(parsed.getTime())) return timestamp;
-  return new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "UTC",
-    timeZoneName: "short",
-  }).format(parsed);
+  return relativeTime(timestamp);
+}
+
+/**
+ * Format an actor string to a display name.
+ * - If it's an email, extract the part before @, capitalize it, and replace dots/underscores.
+ * - If it looks like a UUID, return "System".
+ * - Otherwise return as-is.
+ */
+function formatActorName(actor: string): string {
+  // Hide UUIDs
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(actor)) {
+    return "System";
+  }
+  // Convert email to display name
+  if (actor.includes("@")) {
+    const name = actor.split("@")[0] ?? actor;
+    return name
+      .replace(/[._]/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  return actor;
 }
 
 export function Timeline({
   entries,
   emptyFallback,
-  formatTimestamp = defaultFormatTimestamp,
+  formatTimestamp: formatTs = defaultFormatTimestamp,
   "aria-label": ariaLabel = "Activity timeline",
   className,
 }: TimelineProps) {
@@ -142,7 +157,7 @@ export function Timeline({
             {/* Entry content. */}
             <div className="min-w-0 flex-1 pt-px">
               <p className="text-sm text-text">
-                <span className="font-medium">{entry.actor}</span>
+                <span className="font-medium">{formatActorName(entry.actor)}</span>
                 {description != null && (
                   <>
                     {" "}
@@ -152,9 +167,10 @@ export function Timeline({
               </p>
               <time
                 dateTime={entry.timestamp}
+                title={formatTimestamp(entry.timestamp)}
                 className="mt-token-1 block text-xs text-text-subdued"
               >
-                {formatTimestamp(entry.timestamp)}
+                {formatTs(entry.timestamp)}
               </time>
             </div>
           </li>

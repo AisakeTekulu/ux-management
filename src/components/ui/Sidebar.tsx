@@ -24,7 +24,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: "Tasks", href: "/tasks", icon: <TasksIcon /> },
   { label: "Sign-offs", href: "/sign-offs", icon: <SignoffsIcon /> },
   { label: "Activity", href: "/activity", icon: <ActivityIcon /> },
-];
+] as const;
 
 const BOTTOM_ITEMS: readonly NavItem[] = [
   { label: "Settings", href: "/settings", icon: <SettingsIcon /> },

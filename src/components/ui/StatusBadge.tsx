@@ -1,16 +1,18 @@
 /**
- * StatusBadge — renders a phase/project status as a colored badge
+ * StatusBadge — renders a phase/project status as a colored badge with icon.
  * (Requirements 14.4, 11.7).
  *
  * This component is the single visual representation of status across the
- * entire application. It derives its label and color exclusively from the
- * status presentation map (`src/lib/domain/status-presentation.ts`), ensuring
- * that every status value — including the derived Overdue indicator — is
- * rendered with one fixed label and one fixed, visually distinct color
- * everywhere it appears.
+ * entire application. Each badge MUST include an icon + text (not color alone).
  *
- * The color is applied via the `status-*` Tailwind color utilities backed by
- * CSS variables in `globals.css` and configured in `tailwind.config.ts`.
+ * Status color mapping:
+ * - Draft → gray (📝 pencil)
+ * - Sent to Client / In Review → blue (mail/arrow)
+ * - Waiting for Feedback → indigo (clock)
+ * - Changes Requested → amber (⚠️ pencil)
+ * - Approved → green (✓)
+ * - Completed → emerald/teal (✓✓ check-circle)
+ * - Overdue → red (⚠️ alert)
  */
 
 import {
@@ -29,40 +31,117 @@ export interface StatusBadgeProps {
 
 /**
  * Static Tailwind class pairs for each color token.
- *
- * Tailwind's JIT compiler requires full class names to appear statically in
- * source so they are included in the generated CSS. We map each color token to
- * its background (with 10% opacity) and text color classes.
  */
 const COLOR_CLASSES: Record<StatusColorToken, { bg: string; text: string }> = {
-  grey: { bg: "bg-status-grey/10", text: "text-status-grey" },
-  blue: { bg: "bg-status-blue/10", text: "text-status-blue" },
-  indigo: { bg: "bg-status-indigo/10", text: "text-status-indigo" },
-  amber: { bg: "bg-status-amber/10", text: "text-status-amber" },
-  green: { bg: "bg-status-green/10", text: "text-status-green" },
-  teal: { bg: "bg-status-teal/10", text: "text-status-teal" },
-  red: { bg: "bg-status-red/10", text: "text-status-red" },
+  grey: { bg: "bg-gray-100", text: "text-gray-700" },
+  blue: { bg: "bg-blue-100", text: "text-blue-700" },
+  indigo: { bg: "bg-indigo-100", text: "text-indigo-700" },
+  amber: { bg: "bg-amber-100", text: "text-amber-800" },
+  green: { bg: "bg-green-100", text: "text-green-800" },
+  teal: { bg: "bg-emerald-100", text: "text-emerald-800" },
+  red: { bg: "bg-red-100", text: "text-red-800" },
 };
 
 /**
- * A small pill badge that renders the label and color for a given status.
+ * Icons for each status — inline SVGs for consistent rendering.
+ */
+function StatusIcon({ status }: { status: StatusBadgeKey }) {
+  const size = 12;
+  const props = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2.5,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+
+  switch (status) {
+    case "Draft":
+      // Pencil icon
+      return (
+        <svg {...props} aria-hidden="true">
+          <path d="M12 20h9" />
+          <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
+        </svg>
+      );
+    case "Sent to Client":
+      // Mail/arrow icon
+      return (
+        <svg {...props} aria-hidden="true">
+          <path d="M22 2L11 13" />
+          <path d="M22 2l-7 20-4-9-9-4 20-7z" />
+        </svg>
+      );
+    case "Waiting for Feedback":
+      // Clock icon
+      return (
+        <svg {...props} aria-hidden="true">
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+      );
+    case "Changes Requested":
+      // Warning/pencil icon
+      return (
+        <svg {...props} aria-hidden="true">
+          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+      );
+    case "Approved":
+      // Single check
+      return (
+        <svg {...props} aria-hidden="true">
+          <path d="M20 6L9 17l-5-5" />
+        </svg>
+      );
+    case "Completed":
+      // Double check / check-circle
+      return (
+        <svg {...props} aria-hidden="true">
+          <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+          <path d="M22 4L12 14.01l-3-3" />
+        </svg>
+      );
+    case "Overdue":
+      // Alert triangle
+      return (
+        <svg {...props} aria-hidden="true">
+          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
+/**
+ * A small pill badge that renders an icon + label for a given status.
  *
  * Uses the canonical STATUS_PRESENTATION map so presentation is consistent
  * across every view: dashboard table, phase detail, portal, etc. (R14.4, R11.7).
  */
 export function StatusBadge({ status, className }: StatusBadgeProps) {
-  const { label, colorToken } = getStatusPresentation(status);
+  const { label } = getStatusPresentation(status);
+  const colorToken = getStatusPresentation(status).colorToken;
   const { bg, text } = COLOR_CLASSES[colorToken];
 
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-sm px-token-2 py-token-1 text-xs font-medium",
+        "inline-flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-medium",
         bg,
         text,
         className,
       )}
     >
+      <StatusIcon status={status} />
       {label}
     </span>
   );
